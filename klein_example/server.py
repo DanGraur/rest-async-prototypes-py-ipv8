@@ -32,9 +32,9 @@ class TestEndpointAsync(Resource):
 
         d = Deferred()
         d.add_callback(self.latent_callback)
-        deferLater(reactor, 0.5, d.callback, request)
+        deferLater(reactor, 2, d.callback, request)
 
-        return NOT_DONE_YET
+        return d
 
 
 @app.route('/sync', methods=['GET', 'POST'])
@@ -65,24 +65,27 @@ def async_method(request):
 
 
 def latent_page(request):
-    print("HERE")
-    request.write(json.dumps({'Response': 'You called an asynchronous method.'}).encode('utf-8'))
+    request.write(json.dumps({'res': 'It has worked'}).encode('utf-8'))
     request.finish()
 
 
 @app.route('/async_two', methods=['GET', 'POST'], branch=True)
 def async_method_two(request):
-    d = deferLater(reactor, 2, lambda: request)
-    d.addCallback(latent_page)
+    # d = deferLater(reactor, 2, lambda: request)
+    # d.addCallback(latent_page)
+
+    d = Deferred()
+    d.add_callback(latent_page)
+    deferLater(reactor, 2, d.callback, request)
+
     return NOT_DONE_YET
 
 
 @inlineCallbacks
 def send_request(endpoint, method=b'GET'):
     g = agent.request(
-        b'GET',
-        # 'http://localhost:8081/{}'.format(endpoint).encode('utf-8'),
-        b'http://localhost:8081/oldasync',
+        method,
+        'http://localhost:8081/{}'.format(endpoint).encode('utf-8'),
         Headers({'User-Agent': ['Twisted Web Client Example'],
                  'Content-Type': ['text/x-greeting']})
     )
@@ -90,8 +93,8 @@ def send_request(endpoint, method=b'GET'):
     returnValue(response)
 
 
-@inlineCallbacks
-def main():
+def twisted_init():
+    """Set up a Twisted REST API"""
     root_endpoint = Resource()
     root_endpoint.putChild(b"oldasync", TestEndpointAsync())
     root_endpoint.putChild(b"oldsync", TestEndpointSync())
@@ -99,19 +102,33 @@ def main():
     reactor.listenTCP(8081, Site(root_endpoint), interface='localhost')
 
 
-    # reactor.listenTCP(8081, Site(app.resource()))
-    # dm = agent.request(
-    #     b'GET',
-    #     b'http://localhost:8081/async_two')
-    # dm.addBoth(print_response)
+def klein_init():
+    """Set up a Klein REST API"""
+    root_endpoint = Resource()
+    root_endpoint.putChild(b'new', app.resource())
 
-    res = send_request('oldsync')
+    reactor.listenTCP(8081, Site(root_endpoint), interface='localhost')
+    # reactor.listenTCP(8081, Site(app.resource()), interface='localhost')
+
+
+@inlineCallbacks
+def main():
+    use_klein = True
+
+    if not use_klein:
+        twisted_init()
+        endpoint = 'oldasync'
+    else:
+        klein_init()
+        endpoint = 'new/async_two'
+
+    res = send_request(endpoint)
     res.addCallback(lambda body: print(body))
-    print("Res", res)
     reactor.run()
 
 
 if __name__ == '__main__':
     main()
 
-# TODO: try to get the async to work; when it does try to do it in Klein
+# TODO: Yeah so the problem is from Klein; It doesn't really know how to handle the NOT_DONE_YET. Maybe it uses some
+#       other form of signaling for an async method (the async keyword??)
