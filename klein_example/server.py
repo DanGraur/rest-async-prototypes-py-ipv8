@@ -27,14 +27,11 @@ class TestEndpointAsync(Resource):
         request.finish()
 
     def render_GET(self, request):
-        # d = deferLater(request, 0.5, lambda: request)
-        # d.addCallback(self.latent_callback)
-
         d = Deferred()
         d.add_callback(self.latent_callback)
-        deferLater(reactor, 2, d.callback, request)
+        deferLater(reactor, 1, d.callback, request)
 
-        return d
+        return NOT_DONE_YET
 
 
 @app.route('/sync', methods=['GET', 'POST'])
@@ -71,9 +68,6 @@ def latent_page(request):
 
 @app.route('/async_two', methods=['GET', 'POST'], branch=True)
 def async_method_two(request):
-    # d = deferLater(reactor, 2, lambda: request)
-    # d.addCallback(latent_page)
-
     d = Deferred()
     d.add_callback(latent_page)
     deferLater(reactor, 2, d.callback, request)
@@ -113,7 +107,7 @@ def klein_init():
 
 @inlineCallbacks
 def main():
-    use_klein = True
+    use_klein = False
 
     if not use_klein:
         twisted_init()
