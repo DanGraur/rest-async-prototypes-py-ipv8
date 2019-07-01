@@ -66,13 +66,13 @@ def latent_page(request):
     request.finish()
 
 
-@app.route('/async_two', methods=['GET', 'POST'], branch=True)
+@app.route('/async_two')
 def async_method_two(request):
     d = Deferred()
     d.add_callback(latent_page)
-    deferLater(reactor, 2, d.callback, request)
+    deferLater(reactor, 5, d.callback, request)
 
-    return NOT_DONE_YET
+    return d
 
 
 @inlineCallbacks
@@ -107,7 +107,7 @@ def klein_init():
 
 @inlineCallbacks
 def main():
-    use_klein = False
+    use_klein = True
 
     if not use_klein:
         twisted_init()
@@ -126,3 +126,6 @@ if __name__ == '__main__':
 
 # TODO: Yeah so the problem is from Klein; It doesn't really know how to handle the NOT_DONE_YET. Maybe it uses some
 #       other form of signaling for an async method (the async keyword??)
+
+
+
