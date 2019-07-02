@@ -1,4 +1,3 @@
-from defer import Deferred
 from flask import Flask
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -19,26 +18,28 @@ agent = Agent(reactor)
 
 @inlineCallbacks
 def send_request(url, method=b'GET'):
+    print("Method: {}\nURL: {}".format(method, url))
     g = agent.request(
         method,
         url,
         Headers({'User-Agent': ['Twisted Web Client Example'],
                  'Content-Type': ['text/x-greeting']}),
+        None
     )
     body = yield g.addCallback(readBody)
     returnValue(body)
+    # g.addCallback(readBody)
+    # return g
 
 
 @inlineCallbacks
 def request_wrapper(endpoint, req_parameter_dict, method=b'GET'):
     url = 'http://localhost:8081/{}?{}'.format(endpoint, '&'.join(
-        ['{}={}'.format(k, v) for k, v in req_parameter_dict])).encode('utf-8')
-    print(url)
-    response = yield send_request(url, method=method)
+        ['{}={}'.format(k, v) for k, v in req_parameter_dict.items()]))
+    response = yield send_request(url.encode('utf_8'), method=method)
     returnValue(response)
 
 
-@inlineCallbacks
 def main():
     my_flask_endpoint = FlaskEndpoint()
     app.register_blueprint(my_flask_endpoint.flask_blueprint)
@@ -51,12 +52,12 @@ def main():
 
     res = request_wrapper("bottle/flask_endpoint/math", {"op": "add", "a": 2, "b": 3})
     res.addCallback(lambda body: print(body))
-    reactor.run()
-    # TOOD: for some reason it doesn't work; likely explanation: needs yields in the call chain; or must yield a Deferred at end of main
-
-    # If I remove this, then the server will not work.
-    yield Deferred()
+    # print(res)
+    # print("HERE")
+    reactor.stop()
 
 
 if __name__ == '__main__':
-    main()
+    reactor.callWhenRunning(main)
+    reactor.run()
+

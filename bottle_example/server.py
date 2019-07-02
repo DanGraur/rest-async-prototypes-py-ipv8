@@ -16,6 +16,7 @@ class FlaskEndpoint:
         self.flask_blueprint.add_url_rule("/echo/", "simple_synchronous_echo", self.simple_synchronous_echo)
 
     def simple_synchronous_handler(self):
+        print("IN METHOD")
         # Flask uses a default request object, which holds the request info
         op = request.args.get("op", "add")
         a = request.args.get("a", None)
