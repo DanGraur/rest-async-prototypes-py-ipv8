@@ -16,28 +16,22 @@ app = Flask(__name__)
 agent = Agent(reactor)
 
 
-@inlineCallbacks
-def send_request(url, method=b'GET'):
-    print("Method: {}\nURL: {}".format(method, url))
+def request_wrapper(endpoint, req_parameter_dict, method=b'GET'):
+    url = 'http://localhost:8081/{}/?{}'.format(endpoint, '&'.join(
+        ['{}={}'.format(k, v) for k, v in req_parameter_dict.items()])).encode("utf-8")
+
+    print("HERE")
+    print("URL = {}\nMETHOD = {}".format(url, method))
     g = agent.request(
         method,
         url,
-        Headers({'User-Agent': ['Twisted Web Client Example'],
-                 'Content-Type': ['text/x-greeting']}),
-        None
+        headers=Headers({'User-Agent': ['Twisted Web Client Example'],
+                         'Content-Type': ['text/x-greeting']}),
+        bodyProducer=None
     )
-    body = yield g.addCallback(readBody)
-    returnValue(body)
-    # g.addCallback(readBody)
-    # return g
-
-
-@inlineCallbacks
-def request_wrapper(endpoint, req_parameter_dict, method=b'GET'):
-    url = 'http://localhost:8081/{}?{}'.format(endpoint, '&'.join(
-        ['{}={}'.format(k, v) for k, v in req_parameter_dict.items()]))
-    response = yield send_request(url.encode('utf_8'), method=method)
-    returnValue(response)
+    print("HERE")
+    d = g.addCallback(readBody)
+    return d
 
 
 def main():
@@ -50,14 +44,12 @@ def main():
 
     reactor.listenTCP(8081, Site(root_endpoint), interface="localhost")
 
+    # FIXME: if you use logging messages, it gets stuck somewhere in this yield. Add more messages to find out what
+    #        the reason is.
     res = request_wrapper("bottle/flask_endpoint/math", {"op": "add", "a": 2, "b": 3})
     res.addCallback(lambda body: print(body))
-    # print(res)
-    # print("HERE")
-    reactor.stop()
 
 
 if __name__ == '__main__':
     reactor.callWhenRunning(main)
     reactor.run()
-
