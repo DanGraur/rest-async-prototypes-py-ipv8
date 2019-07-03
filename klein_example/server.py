@@ -1,10 +1,9 @@
 import json
 
-from defer import Deferred
 from klein import Klein
 
 from twisted.internet import reactor
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks, returnValue, Deferred
 from twisted.internet.task import deferLater
 from twisted.web.http_headers import Headers
 from twisted.web.resource import Resource
@@ -28,7 +27,7 @@ class TestEndpointAsync(Resource):
 
     def render_GET(self, request):
         d = Deferred()
-        d.add_callback(self.latent_callback)
+        d.addCallback(self.latent_callback)
         deferLater(reactor, 1, d.callback, request)
 
         return NOT_DONE_YET
@@ -51,7 +50,7 @@ def async_method(request):
             print("Hello from async {}".format(call_count))
 
             d = Deferred()
-            d.add_callback(simulate_workload)
+            d.addCallback(simulate_workload)
             deferLater(reactor, 0.5, d.callback, call_count + 1)
 
             return NOT_DONE_YET
@@ -69,8 +68,8 @@ def latent_page(request):
 @app.route('/async_two')
 def async_method_two(request):
     d = Deferred()
-    d.add_callback(latent_page)
-    deferLater(reactor, 5, d.callback, request)
+    d.addCallback(latent_page)
+    deferLater(reactor, 2, d.callback, request)
 
     return d
 
@@ -126,6 +125,3 @@ if __name__ == '__main__':
 
 # TODO: Yeah so the problem is from Klein; It doesn't really know how to handle the NOT_DONE_YET. Maybe it uses some
 #       other form of signaling for an async method (the async keyword??)
-
-
-
