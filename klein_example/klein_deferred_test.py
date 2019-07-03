@@ -41,17 +41,36 @@ def simple_synchronous_handler(request):
     return json.dumps({'res': 'success'}).encode('utf-8')
 
 
+counter = 0
+
+
 def latent_page(request):
-    # request.write(json.dumps({'res': 'It has worked'}).encode('utf-8'))
-    # request.finish()
-    return json.dumps({'res': 'It has worked'}).encode('utf-8')
+    global counter
+    counter += 1
+    if counter % 3 == 0:
+        print("IN final latent_page", counter)
+        request.write(json.dumps({'res': 'It has worked'}).encode('utf-8'))
+        request.finish()
+    else:
+        print("IN latent_page", counter)
+
+        d = Deferred()
+        d.addCallback(latent_page)
+        deferLater(reactor, 2, d.callback, request)
+
+        return d
 
 
 @app.route("/async/")
 def simple_async_handler(request):
+    print(request)
+    print(type(request))
+
     d = Deferred()
     d.addCallback(latent_page)
-    deferLater(reactor, 5, d.callback, request)
+    deferLater(reactor, 2, d.callback, request)
+
+    print("IN simple_async_handler")
 
     return d
 
@@ -63,7 +82,18 @@ def simple_async_handler(request):
 
 reactor.listenTCP(8081, Site(app.resource()), interface='localhost')
 
-req_sync = request_wrapper('/async/')
-req_sync.addCallback(lambda response: print(response))
+try:
+    req_sync = request_wrapper('async/')
+    req_sync.addCallback(lambda response: print(response))
+except Exception as e:
+    print(e)
 
 reactor.run()
+
+# TODO: YOU CANNOT PASS STATE WHEN DEFERRING WITH KLEIN: I could not pass an additional argument to the deferred's
+# callback, other than the request object itself. I could only pass the state via a global variable; is it possible
+# to send state via the request object
+
+# Also, from the Klein docs, and why I think the Deferred object itself is used rather than a NOT_DONE_YET:
+#       And of course, this is Twisted. So there is a wealth of APIs that return a Deferred. A Deferred may also be
+#       returned from handler functions and their result will be used as the response body.
