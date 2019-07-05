@@ -17,7 +17,7 @@ def redirect_sync(request):
 
 
 @app.route("/async", branch=True)
-def redirect_sync(request):
+def redirect_async(request):
     return AsyncKleinEndpoint().async_klein_endpoint.resource()
 
 
@@ -40,6 +40,9 @@ def request_wrapper(endpoint, req_parameter_dict, method=b'GET'):
 def main():
     reactor.listenTCP(8081, Site(app.resource()), interface="localhost")
 
+    # TODO: it looks like the routing does not work as expected: i.e. all requests are forwarded to the async (I think)
+    #       this might be the case since two Klein apps are instantiated in the same module; it might be worth splitting
+    #       this up, and adding a comment which states that a module may have one and only one app
     req_1 = request_wrapper("sync/math", {"op": "mul", "a": 10, "b": 31})
     req_1.addCallback(lambda response: print(response))
 
