@@ -41,34 +41,55 @@ def simple_synchronous_handler(request):
     return json.dumps({'res': 'success'}).encode('utf-8')
 
 
-counter = 0
-
-
-def latent_page(request):
-    global counter
-    counter += 1
-    if counter % 3 == 0:
-        print("IN final latent_page", counter)
+# TODO: Maybe pack the first argument as tuple
+def latent_page(args):
+    request, count = args
+    count += 1
+    if count % 3 == 0:
+        print("IN final latent_page", count)
         request.write(json.dumps({'res': 'It has worked'}).encode('utf-8'))
         request.finish()
     else:
-        print("IN latent_page", counter)
+        print("IN latent_page", count)
 
         d = Deferred()
         d.addCallback(latent_page)
-        deferLater(reactor, 2, d.callback, request)
+        deferLater(reactor, 1, d.callback, (request, count))
 
         return d
 
 
 @app.route("/async/")
 def simple_async_handler(request):
-    print(request)
-    print(type(request))
-
     d = Deferred()
     d.addCallback(latent_page)
-    deferLater(reactor, 2, d.callback, request)
+    deferLater(reactor, 1, d.callback, (request, 0))
+
+    print("IN simple_async_handler")
+
+    return d
+
+
+@app.route("/async_nested/")
+def simple_nested_async_handler(request):
+    def inner(count):
+        count += 1
+        if count % 3 == 0:
+            print("IN final latent_page", count)
+            request.write(json.dumps({'res': 'It has worked'}).encode('utf-8'))
+            request.finish()
+        else:
+            print("IN latent_page", count)
+
+            d = Deferred()
+            d.addCallback(inner)
+            deferLater(reactor, 1, d.callback, count)
+
+            return d
+
+    d = Deferred()
+    d.addCallback(inner)
+    deferLater(reactor, 2, d.callback, 0)
 
     print("IN simple_async_handler")
 
@@ -97,3 +118,5 @@ reactor.run()
 # Also, from the Klein docs, and why I think the Deferred object itself is used rather than a NOT_DONE_YET:
 #       And of course, this is Twisted. So there is a wealth of APIs that return a Deferred. A Deferred may also be
 #       returned from handler functions and their result will be used as the response body.
+# That is, return the Deferred directly, and do not bother with NOT_DONE_YET (since Klein doesn't know what to do
+# with it anyway)

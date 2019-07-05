@@ -33,6 +33,8 @@ def request_wrapper(endpoint, req_parameter_dict, method=b'GET'):
 
 def main():
     my_flask_endpoint = FlaskEndpoint()
+    # Since Flask is stateful, using multiple apps is generally not a common practice (although it is possible)
+    # As a consequence, blueprints are employed to register handles in projects with multiple modules
     app.register_blueprint(my_flask_endpoint.flask_blueprint)
 
     root_endpoint = Resource()

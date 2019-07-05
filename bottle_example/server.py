@@ -14,11 +14,11 @@ class FlaskEndpoint:
         # Register a request handler associated to the specified url
 
         # Notice the '/' character at the end; this must be specified in the request's target uri
-        self.flask_blueprint.add_url_rule("/math/", "simple_synchronous_handler", self.simple_synchronous_handler)
+        self.flask_blueprint.add_url_rule("/math/", "synchronous_math", self.synchronous_math)
 
-        self.flask_blueprint.add_url_rule("/echo", "simple_synchronous_echo", self.simple_synchronous_echo)
+        self.flask_blueprint.add_url_rule("/echo", "synchronous_echo", self.synchronous_echo)
 
-    def simple_synchronous_handler(self):
+    def synchronous_math(self):
         # Flask uses a default request object, which holds the request info
         op = request.args.get("op", "add")
         a = request.args.get("a", None)
@@ -42,7 +42,7 @@ class FlaskEndpoint:
         else:
             return jsonify({'result': a / b})
 
-    def simple_synchronous_echo(self):
+    def synchronous_echo(self):
         msg = request.args.get("msg", None)
 
         if msg:

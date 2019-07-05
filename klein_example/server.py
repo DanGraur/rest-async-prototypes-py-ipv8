@@ -1,127 +1,109 @@
 import json
-
 from klein import Klein
-
 from twisted.internet import reactor
-from twisted.internet.defer import inlineCallbacks, returnValue, Deferred
+from twisted.internet.defer import Deferred
 from twisted.internet.task import deferLater
-from twisted.web.http_headers import Headers
-from twisted.web.resource import Resource
-from twisted.web.server import NOT_DONE_YET, Site
-from twisted.web.client import Agent, readBody
-
-# Define the Klein app
-app = Klein()
-agent = Agent(reactor)
+from twisted.web import http
 
 
-class TestEndpointSync(Resource):
-    def render_GET(self, request):
-        return json.dumps({'Response': 'You called a synchronous method.'}).encode('utf-8')
+def pack_http_response(data):
+    return json.dumps(data).encode('utf-8')
 
 
-class TestEndpointAsync(Resource):
-    def latent_callback(self, request):
-        request.write(json.dumps({'res': 'It has worked'}).encode('utf-8'))
-        request.finish()
+class SyncKleinEndpoint:
+    # Define the Kelin app as a class variable, and use it to register handlers
+    sync_klein_endpoint = Klein()
 
-    def render_GET(self, request):
-        d = Deferred()
-        d.addCallback(self.latent_callback)
-        deferLater(reactor, 1, d.callback, request)
+    @sync_klein_endpoint.route("/math")
+    def synchronous_math(self, request):
+        # Flask uses a default request object, which holds the request info
+        op = request.args.get(b"op", "add")
+        a = request.args.get(b"a", None)
+        b = request.args.get(b"b", None)
 
-        return NOT_DONE_YET
+        # Handle the errors
+        if not a or not b:
+            request.setResponseCode(http.BAD_REQUEST)
+            return pack_http_response({'result': "Error: one or both variables were not specified by the request"})
 
+        a = int(a)
+        b = int(b)
 
-@app.route('/sync', methods=['GET', 'POST'])
-def sync_method(request):
-    return json.dumps({'Response': 'You called a synchronous method.'}).encode('utf-8')
+        op = op.lower()
 
-
-@app.route('/async', methods=['GET', 'POST'], branch=True)
-def async_method(request):
-
-    # Could it be that Klein is closing my request
-    def simulate_workload(call_count):
-        if call_count > 3:
-            request.write(json.dumps({'Response': 'You called an asynchronous method.'}).encode('utf-8'))
-            request.finish()
+        if op == "add":
+            return pack_http_response({'result': a + b})
+        elif op == "sub":
+            return pack_http_response({'result': a - b})
+        elif op == "mul":
+            return pack_http_response({'result': a * b})
         else:
-            print("Hello from async {}".format(call_count))
+            return pack_http_response({'result': a / b})
 
-            d = Deferred()
-            d.addCallback(simulate_workload)
-            deferLater(reactor, 0.5, d.callback, call_count + 1)
+    @sync_klein_endpoint.route("/echo")
+    def synchronous_echo(self, request):
+        msg = request.args.get("msg", None)
 
-            return NOT_DONE_YET
-
-    deferLater(reactor, 0.5, simulate_workload, 1)
-
-    return NOT_DONE_YET
-
-
-def latent_page(request):
-    request.write(json.dumps({'res': 'It has worked'}).encode('utf-8'))
-    request.finish()
+        if msg:
+            return pack_http_response({"echo": msg})
+        else:
+            return pack_http_response({'result': "Error: no message was specified"})
 
 
-@app.route('/async_two')
-def async_method_two(request):
-    d = Deferred()
-    d.addCallback(latent_page)
-    deferLater(reactor, 2, d.callback, request)
+class AsyncKleinEndpoint:
+    # Since Klein apps are stateless, it is possible to use multiples such instances to facilitate multi module projects
+    async_klein_endpoint = Klein()
 
-    return d
+    @async_klein_endpoint.route("/math")
+    def asynchronous_math(self, request):
+        # Flask uses a default request object, which holds the request info
+        op = request.args.get("op", "add")
+        a = request.args.get("a", None)
+        b = request.args.get("b", None)
 
+        # Handle the errors
+        if not a or not b:
+            request.setResponseCode(http.BAD_REQUEST)
+            return pack_http_response({'result': "Error: one or both variables were not specified by the request"})
 
-@inlineCallbacks
-def send_request(endpoint, method=b'GET'):
-    g = agent.request(
-        method,
-        'http://localhost:8081/{}'.format(endpoint).encode('utf-8'),
-        Headers({'User-Agent': ['Twisted Web Client Example'],
-                 'Content-Type': ['text/x-greeting']})
-    )
-    response = yield g.addCallback(readBody)
-    returnValue(response)
+        def inner_math_curried(op, a, b):
+            def inner_math(count):
+                count += 1
 
+                if count == 2:
+                    if op == "add":
+                        request.write(pack_http_response({'result': a + b}))
+                    elif op == "sub":
+                        request.write(pack_http_response({'result': a - b}))
+                    elif op == "mul":
+                        request.write(pack_http_response({'result': a * b}))
+                    else:
+                        request.write(pack_http_response({'result': a / b}))
+                    request.finish()
+                else:
+                    d = Deferred()
+                    d.addCallback(inner_math)
+                    deferLater(reactor, 1, d.callback, count)
 
-def twisted_init():
-    """Set up a Twisted REST API"""
-    root_endpoint = Resource()
-    root_endpoint.putChild(b"oldasync", TestEndpointAsync())
-    root_endpoint.putChild(b"oldsync", TestEndpointSync())
+            return inner_math
 
-    reactor.listenTCP(8081, Site(root_endpoint), interface='localhost')
+        d = Deferred()
+        d.addCallback(inner_math_curried(op.lower(), int(a), int(b)))
+        deferLater(reactor, 1, d.callback, 0)
 
+        return d
 
-def klein_init():
-    """Set up a Klein REST API"""
-    root_endpoint = Resource()
-    root_endpoint.putChild(b'new', app.resource())
+    @async_klein_endpoint.route("/echo")
+    def asynchronous_echo(self, request):
+        msg = request.args.get("msg", None)
 
-    reactor.listenTCP(8081, Site(root_endpoint), interface='localhost')
-    # reactor.listenTCP(8081, Site(app.resource()), interface='localhost')
+        if not msg:
+            request.setResponseCode(http.BAD_REQUEST)
+            return pack_http_response({'result': "Error: no message was specified"})
 
+        def echo(msg):
+            request.write(pack_http_response({"echo": msg}))
+            request.finish()
 
-@inlineCallbacks
-def main():
-    use_klein = True
-
-    if not use_klein:
-        twisted_init()
-        endpoint = 'oldasync'
-    else:
-        klein_init()
-        endpoint = 'new/async_two'
-
-    res = send_request(endpoint)
-    res.addCallback(lambda body: print(body))
-    reactor.run()
-
-
-if __name__ == '__main__':
-    main()
-
-# TODO: Yeah so the problem is from Klein; It doesn't really know how to handle the NOT_DONE_YET. Maybe it uses some
-#       other form of signaling for an async method (the async keyword??)
+        d = deferLater(reactor, 2, echo, msg)
+        return d
