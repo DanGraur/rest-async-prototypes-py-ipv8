@@ -74,28 +74,25 @@ class AsyncKleinEndpoint:
             def inner_math(count):
                 count += 1
 
-                try:
-                    if count == 2:
-                        if op == "add":
-                            request.write(pack_http_response({'result': a + b}))
-                        elif op == "sub":
-                            request.write(pack_http_response({'result': a - b}))
-                        elif op == "mul":
-                            request.write(pack_http_response({'result': a * b}))
-                        else:
-                            request.write(pack_http_response({'result': a / b}))
-                        request.finish()
+                if count == 2:
+                    if op == "add":
+                        request.write(pack_http_response({'result': a + b}))
+                    elif op == "sub":
+                        request.write(pack_http_response({'result': a - b}))
+                    elif op == "mul":
+                        request.write(pack_http_response({'result': a * b}))
                     else:
-                        d = Deferred()
-                        d.addCallback(inner_math)
-                        deferLater(reactor, 1, d.callback, count)
+                        request.write(pack_http_response({'result': a / b}))
+                    request.finish()
+                else:
+                    d = Deferred()
+                    d.addCallback(inner_math)
+                    deferLater(reactor, 1, d.callback, count)
 
-                        # The deferreds always need to be returned in Klein; if they are not, Twisted throws an error
-                        # which states that the write() is called on a request which is finished. This happens because
-                        # Klein calls finish() on a request implicitly, if no deferred is returned.
-                        return d
-                except Exception as e:
-                    print(e)
+                    # The deferreds always need to be returned in Klein; if they are not, Twisted throws an error
+                    # which states that the write() is called on a request which is finished. This happens because
+                    # Klein calls finish() on a request implicitly, if no deferred is returned.
+                    return d
 
             return inner_math
 

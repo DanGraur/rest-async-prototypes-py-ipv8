@@ -94,13 +94,6 @@ class AsyncQuartEndpoint:
 
             return inner_math
 
-        # loop = asyncio.get_event_loop()
-        # f = loop.call_later(1, inner_math_curried(op, a, b), 0)
-
-        # TODO: I think the idea might be good, but there are certain issues which need to be cleared up; looking into
-        #       this a bit further might be a good idea. BWT f is TimerHandle.
-        #       Also, see: https://stackoverflow.com/questions/48070296/python-asyncio-recursion-with-call-later
-        #       Also, see: https://stackoverflow.com/questions/37278647/fire-and-forget-python-async-await/37345564#37345564
         return await inner_math_curried(op, a, b)(0)
 
     async def echo(self):
