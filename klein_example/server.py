@@ -44,7 +44,6 @@ class SyncKleinEndpoint:
 
     @sync_klein_endpoint.route("/echo")
     def synchronous_echo(self, request):
-        # return pack_http_response({"Req args": request.args})
         msg = request.args.get(b"msg", [None])[0]
 
         if msg:
@@ -104,7 +103,6 @@ class AsyncKleinEndpoint:
 
     @async_klein_endpoint.route("/echo")
     def asynchronous_echo(self, request):
-        # return pack_http_response({"Req args": request.args})
         msg = request.args.get(b"msg", [None])[0]
 
         if not msg:
@@ -115,5 +113,5 @@ class AsyncKleinEndpoint:
             request.write(pack_http_response({"echo": msg.decode('utf-8')}))
             request.finish()
 
-        d = deferLater(reactor, 2, echo, msg)
+        d = deferLater(reactor, 1, echo, msg)
         return d

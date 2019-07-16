@@ -40,17 +40,17 @@ def main():
     root_endpoint = Resource()
     # A flask app can only be used with Twisted via the WSGIResource. Its handlers do not support asynchronous code.
     flask_resource = WSGIResource(reactor, reactor.getThreadPool(), app)
-    root_endpoint.putChild(b"bottle", flask_resource)
+    root_endpoint.putChild(b"flask", flask_resource)
 
     reactor.listenTCP(8081, Site(root_endpoint), interface="localhost")
 
     # Note the '/' character at the end of the endpoint this is essential for a correct routing since the handler is
     # registered at '/math/' not '/math'
-    req_1 = request_wrapper("bottle/flask_endpoint/math/", {"op": "mul", "a": 10, "b": 31})
+    req_1 = request_wrapper("flask/flask_endpoint/math/", {"op": "mul", "a": 10, "b": 31})
     req_1.addCallback(lambda response: print(response))
 
     # There is no '/' character at the end of the uri because the handler was registered under '/echo'
-    req_2 = request_wrapper("bottle/flask_endpoint/echo", {"msg": "Hello world!"})
+    req_2 = request_wrapper("flask/flask_endpoint/echo", {"msg": "Hello world!"})
     req_2.addCallback(lambda response: print(response))
 
 
