@@ -8,3 +8,12 @@ The latter instruction will send out 2 synchronous requests.
 
 Additional requests may be sent to the uri: `localhost:8081/flask/flask_endpoint/<echo|math>?<args>`.   
 
+## Dependencies
+
+The following are the dependencies for this demo:
+
+```bash
+Twisted
+flask
+```
+

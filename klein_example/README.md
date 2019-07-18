@@ -8,3 +8,12 @@ The latter instruction will send out  4 requests. The first 2 synchronous, and t
 
 Additional requests may be sent to the uri: `localhost:8081/<sync|async>/<math|echo>?<args>`.
 
+
+## Dependencies
+
+The following are the dependencies for this demo:
+
+```bash
+Twisted
+klein
+```
