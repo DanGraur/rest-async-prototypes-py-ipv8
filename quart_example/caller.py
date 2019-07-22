@@ -21,6 +21,7 @@ async def send_requests(loop=None):
                                                                    'this%20is%20a%20message.'))
 
     # Async Requests
+    attach_print_callback(loop.run_in_executor(None, requests.get, 'http://localhost:8081/async/parallel'))
     attach_print_callback(loop.run_in_executor(None, requests.get, 'http://localhost:8081/async/math?a=123&b=3&op=mul'))
     attach_print_callback(loop.run_in_executor(None, requests.get, 'http://localhost:8081/async/echo?msg=(Async)%20'
                                                                    'this%20is%20a%20message.'))

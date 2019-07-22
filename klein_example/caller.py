@@ -21,9 +21,12 @@ def redirect_async(request):
     return AsyncKleinEndpoint().async_klein_endpoint.resource()
 
 
-def request_wrapper(endpoint, req_parameter_dict, method=b'GET'):
-    url = 'http://localhost:8081/{}?{}'.format(endpoint, '&'.join(
-        ['{}={}'.format(k, v) for k, v in req_parameter_dict.items()])).encode("utf-8").replace(b' ', b'%20')
+def request_wrapper(endpoint, req_parameter_dict=None, method=b'GET'):
+    if req_parameter_dict:
+        url = 'http://localhost:8081/{}?{}'.format(endpoint, '&'.join(
+            ['{}={}'.format(k, v) for k, v in req_parameter_dict.items()])).encode("utf-8").replace(b' ', b'%20')
+    else:
+        url = 'http://localhost:8081/{}'.format(endpoint).encode("utf-8").replace(b' ', b'%20')
 
     # print(url)
     g = agent.request(
@@ -51,6 +54,9 @@ def main():
 
     req_4 = request_wrapper("async/echo", {"msg": "Hello world Async!"})
     req_4.addCallback(lambda response: print(response))
+
+    req_5 = request_wrapper("async/parallel")
+    req_5.addCallback(lambda response: print(response))
 
 
 if __name__ == '__main__':

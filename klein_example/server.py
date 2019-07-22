@@ -1,7 +1,10 @@
 import json
+import random
+
+import defer
 from klein import Klein
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.task import deferLater
 from twisted.web import http
 
@@ -114,4 +117,37 @@ class AsyncKleinEndpoint:
             request.finish()
 
         d = deferLater(reactor, 1, echo, msg)
+        return d
+
+    @async_klein_endpoint.route("/parallel")
+    def run_in_parallel(self, request):
+        some_random_words = [
+            "gel",
+            "mine",
+            "car",
+            "soap",
+            "umbrella",
+            "variable",
+            "function",
+            "type",
+            "wheel",
+            "bird",
+            "around"
+        ]
+
+        def random_word():
+            return some_random_words[random.randint(0, len(some_random_words) - 1)]
+
+        def final_deferred(res_list):
+            request.write(pack_http_response({"res": " ".join([x[1] for x in res_list])}))
+            request.finish()
+
+        run_count = 10
+        deferred_list = []
+
+        for i in range(run_count):
+            deferred_list.append(deferLater(reactor, random.uniform(1.0, 2.0), random_word))
+
+        d = DeferredList(deferred_list)
+        d.addCallback(final_deferred)
         return d
