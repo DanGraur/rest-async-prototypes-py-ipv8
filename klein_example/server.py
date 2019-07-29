@@ -1,7 +1,6 @@
 import json
 import random
 
-import defer
 from klein import Klein
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred, DeferredList

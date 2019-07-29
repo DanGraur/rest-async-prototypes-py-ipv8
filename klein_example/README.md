@@ -4,7 +4,7 @@ The following instructions describe how to start up a Quart based server, and fo
 
 1. run `python caller.py`
 
-The latter instruction will send out  4 requests. The first 2 synchronous, and the latter 2 asynchronous.
+The latter instruction will send out  5 requests. The first 2 synchronous, and the latter 3 asynchronous.
 
 Additional requests may be sent to the uri: `localhost:8081/<sync|async>/<math|echo>?<args>`.
 

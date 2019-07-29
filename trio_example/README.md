@@ -20,5 +20,6 @@ python3.7
 trio
 asks            # Asynchronous request library for Trio
 Quart-Trio      # Port of Quart for Trio
+Quart
 ```
 
